@@ -3,6 +3,7 @@ package com.example;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 
 import io.rsocket.AbstractRSocket;
 import io.rsocket.Payload;
@@ -22,6 +23,7 @@ public class HelloRSocketServer {
 	public static void main(String[] args) throws Exception {
 		int port = Optional.ofNullable(System.getenv("PORT")).map(Integer::parseInt)
 				.orElse(7000);
+		CountDownLatch latch = new CountDownLatch(1);
 		ServerTransport<NettyContextCloseable> transport = WebsocketServerTransport
 				.create("0.0.0.0", port);
 		RSocketFactory.receive().acceptor(
@@ -53,6 +55,11 @@ public class HelloRSocketServer {
 				.transport(transport) //
 				.start() //
 				.subscribe();
-		System.in.read();
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			latch.countDown();
+			log.info("Shutdown");
+		}));
+		latch.await();
+		log.info("Bye");
 	}
 }
